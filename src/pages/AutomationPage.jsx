@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AutomationActivityPanel } from '../components/product/automation/AutomationActivityPanel'
+import { ExecutorStatusPanel } from '../components/product/automation/ExecutorStatusPanel'
 import { AutomationTaskForm } from '../components/product/automation/AutomationTaskForm'
 import { AutomationTimersPanel } from '../components/product/automation/AutomationTimersPanel'
 import { ManualLogForm } from '../components/product/automation/ManualLogForm'
+import { StatCard } from '../components/ui/StatCard'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscriptionAccess } from '../hooks/useSubscriptionAccess'
 import {
@@ -17,6 +19,7 @@ import {
 } from '../services/executionLogs'
 import { runAutomationTask } from '../services/executor'
 import { subscribeToExternalAccounts } from '../services/externalAccounts'
+import { subscribeToAgentHeartbeats } from '../services/agents'
 
 const TASK_FORM = {
   externalAccountId: '',
@@ -44,6 +47,7 @@ export function AutomationPage() {
   const [accounts, setAccounts] = useState([])
   const [tasks, setTasks] = useState([])
   const [logs, setLogs] = useState([])
+  const [agents, setAgents] = useState([])
   const [taskForm, setTaskForm] = useState(TASK_FORM)
   const [logForm, setLogForm] = useState(LOG_FORM)
   const [feedback, setFeedback] = useState('')
@@ -57,6 +61,10 @@ export function AutomationPage() {
     }
 
     const unsubscribers = [
+      subscribeToAgentHeartbeats({
+        next: setAgents,
+        error: (nextError) => setError(nextError.message),
+      }),
       subscribeToExternalAccounts({
         ownerId: session.authUser.uid,
         isAdmin: session.isAdmin,
@@ -93,12 +101,29 @@ export function AutomationPage() {
     () => tasks.filter((item) => item.status === 'active'),
     [tasks],
   )
+  const queueTasks = useMemo(
+    () =>
+      [...activeTimers].sort((left, right) => {
+        const priorityDiff = Number(left.priority ?? 999) - Number(right.priority ?? 999)
+
+        if (priorityDiff !== 0) {
+          return priorityDiff
+        }
+
+        return String(left.nextRunAt ?? '').localeCompare(String(right.nextRunAt ?? ''))
+      }),
+    [activeTimers],
+  )
   const accountById = useMemo(
     () =>
       accounts.reduce((accumulator, item) => {
         accumulator[item.id] = item
         return accumulator
       }, {}),
+    [accounts],
+  )
+  const runnerConnectedCount = useMemo(
+    () => accounts.filter((item) => item.sessionStatus === 'connected').length,
     [accounts],
   )
 
@@ -250,44 +275,79 @@ export function AutomationPage() {
           {subscriptionAccess.readOnlyReason}
         </div>
       ) : null}
-      <div className="grid gap-6 xl:grid-cols-[1fr_0.92fr]">
-        <AutomationTaskForm
-          accounts={accounts}
-          canSaveTask={canSaveTask && (subscriptionAccess.canManageProduct || session.isAdmin)}
-          form={taskForm}
-          isSubmitting={isSubmitting}
-          onChange={handleTaskChange}
-          onReset={resetTaskForm}
-          onSubmit={handleTaskSubmit}
+      <div className="grid gap-4 xl:grid-cols-4">
+        <StatCard
+          eyebrow="Fila"
+          title="Tarefas prontas"
+          value={String(tasks.length).padStart(2, '0')}
+          description="Itens que o adaptador externo vai consumir a partir do painel."
         />
-
-        <ManualLogForm
-          accounts={accounts}
-          canCreateLog={canCreateLog && (subscriptionAccess.canManageProduct || session.isAdmin)}
-          form={logForm}
-          isSubmitting={isSubmitting}
-          onChange={handleLogChange}
-          onSubmit={handleLogSubmit}
+        <StatCard
+          eyebrow="Timers"
+          title="Ciclos ativos"
+          value={String(activeTimers.length).padStart(2, '0')}
+          description="Cronometros em execucao ou aguardando a proxima janela."
+        />
+        <StatCard
+          eyebrow="Sessoes"
+          title="Contas conectadas"
+          value={String(runnerConnectedCount).padStart(2, '0')}
+          description="Contas com indicacao de sessao pronta para validacao do fluxo."
+        />
+        <StatCard
+          eyebrow="Observabilidade"
+          title="Logs recentes"
+          value={String(logs.length).padStart(2, '0')}
+          description="Eventos de operacao e pontos de verificacao registrados no painel."
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <AutomationTimersPanel
-          activeTimers={activeTimers}
-          isSubmitting={isSubmitting || Boolean(runningTaskId)}
-          onEditTask={editTask}
-        />
+      <ExecutorStatusPanel
+        accountsById={accountById}
+        activeTasks={queueTasks}
+        agents={agents}
+      />
 
-        <AutomationActivityPanel
-          accountById={accountById}
-          isSubmitting={isSubmitting || (!subscriptionAccess.canManageProduct && !session.isAdmin)}
-          logs={logs}
-          onDeleteTask={handleDeleteTask}
-          onEditTask={editTask}
-          onRunTask={handleRunTask}
-          runningTaskId={runningTaskId}
-          tasks={tasks}
-        />
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.2fr)_420px]">
+        <div className="space-y-6">
+          <AutomationTaskForm
+            accounts={accounts}
+            canSaveTask={canSaveTask && (subscriptionAccess.canManageProduct || session.isAdmin)}
+            form={taskForm}
+            isSubmitting={isSubmitting}
+            onChange={handleTaskChange}
+            onReset={resetTaskForm}
+            onSubmit={handleTaskSubmit}
+          />
+
+          <AutomationActivityPanel
+            accountById={accountById}
+            isSubmitting={isSubmitting || (!subscriptionAccess.canManageProduct && !session.isAdmin)}
+            logs={logs}
+            onDeleteTask={handleDeleteTask}
+            onEditTask={editTask}
+            onRunTask={handleRunTask}
+            runningTaskId={runningTaskId}
+            tasks={tasks}
+          />
+        </div>
+
+        <div className="space-y-6 2xl:sticky 2xl:top-4 2xl:self-start">
+          <AutomationTimersPanel
+            activeTimers={activeTimers}
+            isSubmitting={isSubmitting || Boolean(runningTaskId)}
+            onEditTask={editTask}
+          />
+
+          <ManualLogForm
+            accounts={accounts}
+            canCreateLog={canCreateLog && (subscriptionAccess.canManageProduct || session.isAdmin)}
+            form={logForm}
+            isSubmitting={isSubmitting}
+            onChange={handleLogChange}
+            onSubmit={handleLogSubmit}
+          />
+        </div>
       </div>
 
       <div className="space-y-2 text-sm">

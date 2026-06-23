@@ -66,8 +66,8 @@ export function ProtectedLayout() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] text-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl gap-6 px-4 py-4 lg:px-6">
-        <aside className="hidden w-72 shrink-0 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.45)] backdrop-blur lg:flex lg:flex-col">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1680px] gap-6 px-4 py-4 2xl:px-8">
+        <aside className="hidden w-[292px] shrink-0 rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.45)] backdrop-blur xl:flex xl:flex-col xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)]">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.34em] text-sky-300/80">
               ControlAutoZen

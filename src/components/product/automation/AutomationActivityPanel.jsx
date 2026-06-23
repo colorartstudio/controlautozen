@@ -15,7 +15,8 @@ export function AutomationActivityPanel({
   return (
     <SectionCard
       title="Tarefas e logs recentes"
-      description="Tudo que ja esta preparado para o executor consumir depois."
+      description="Fila operacional do produto, pronta para ser consumida por um agente externo com sessao persistida."
+      className="overflow-hidden"
     >
       <div className="space-y-4">
         {tasks.map((task) => (
@@ -33,7 +34,7 @@ export function AutomationActivityPanel({
               <StatusBadge status={task.status}>{task.status}</StatusBadge>
             </div>
 
-            <div className="mt-4 grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+            <div className="mt-4 grid gap-3 text-sm text-slate-300 xl:grid-cols-2">
               <p>
                 <strong className="text-white">Ultimo resultado:</strong> {task.lastResult}
               </p>
@@ -47,6 +48,12 @@ export function AutomationActivityPanel({
               <p>
                 <strong className="text-white">Sessao:</strong>{' '}
                 {accountById[task.externalAccountId]?.sessionStatus ?? 'pending'}
+              </p>
+              <p>
+                <strong className="text-white">Prioridade:</strong> {task.priority ?? 1}
+              </p>
+              <p>
+                <strong className="text-white">Ciclo:</strong> {task.cycleHours ?? 3}h
               </p>
             </div>
 

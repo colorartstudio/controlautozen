@@ -11,7 +11,8 @@ export function ManualLogForm({
   return (
     <SectionCard
       title="Registrar log manual"
-      description="Use logs manuais para validar fluxo, cronometros e pontos de observabilidade antes do executor."
+      description="Use esta lateral como console rapido para checkpoints, erros, notificacoes e validacao do fluxo."
+      className="2xl:max-h-[calc(100vh-11rem)]"
     >
       <form className="grid gap-4" onSubmit={onSubmit}>
         <label className="grid gap-2">

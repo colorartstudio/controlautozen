@@ -67,7 +67,12 @@ export function getStatusTone(status) {
     case 'completed':
     case 'success':
     case 'trialing':
+    case 'online':
+    case 'idle':
       return 'emerald'
+    case 'busy':
+    case 'claimed':
+    case 'validating':
     case 'paused':
     case 'pending':
     case 'draft':
@@ -76,6 +81,8 @@ export function getStatusTone(status) {
     case 'expired':
     case 'failed':
     case 'archived':
+    case 'error':
+    case 'expired_session':
       return 'rose'
     default:
       return 'slate'

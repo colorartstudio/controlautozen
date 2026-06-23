@@ -6,7 +6,8 @@ export function AutomationTimersPanel({ activeTimers, isSubmitting, onEditTask }
   return (
     <SectionCard
       title="Timers ativos"
-      description="Visao dos cronometros antes da fase do executor."
+      description="Bloco rapido para acompanhar janelas e reeditar a configuracao operacional."
+      className="2xl:max-h-[calc(100vh-30rem)]"
     >
       <div className="space-y-3">
         {activeTimers.length === 0 ? (
@@ -15,10 +16,7 @@ export function AutomationTimersPanel({ activeTimers, isSubmitting, onEditTask }
           </div>
         ) : (
           activeTimers.map((task) => (
-            <div
-              key={task.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-4"
-            >
+            <div key={task.id} className="rounded-3xl border border-white/10 bg-white/5 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-white">{task.externalAccountName}</p>
@@ -26,10 +24,11 @@ export function AutomationTimersPanel({ activeTimers, isSubmitting, onEditTask }
                 </div>
                 <StatusBadge status={task.status}>{task.status}</StatusBadge>
               </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
+              <div className="mt-4 grid gap-3 text-sm text-slate-300 xl:grid-cols-2">
                 <span>Proximo ciclo: {formatCountdown(task.nextRunAt)}</span>
                 <span>Plus: ${task.plusAmount}</span>
                 <span>3Hours acima de: ${task.minAvailableBalance}</span>
+                <span>Ciclo: {task.cycleHours}h</span>
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button

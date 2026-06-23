@@ -120,9 +120,12 @@ service cloud.firestore {
         'sessionMode',
         'sessionStatus',
         'runnerStatus',
+        'agentId',
         'notes',
         'lastCredentialUpdateAt',
         'lastExecutionAt',
+        'lastSessionCheckAt',
+        'lastValidationAt',
         'createdAt',
         'updatedAt'
       ]);
@@ -148,8 +151,14 @@ service cloud.firestore {
         'cycleHours',
         'priority',
         'status',
+        'agentStatus',
+        'claimedAt',
+        'claimedBy',
         'nextRunAt',
         'lastRunAt',
+        'lastValidatedAt',
+        'validationStatus',
+        'validationSummary',
         'lastResult',
         'notes',
         'createdAt',
@@ -211,6 +220,30 @@ service cloud.firestore {
         'invitePath',
         'status',
         'referredCount',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasAgentHeartbeatKeys() {
+      return request.resource.data.keys().hasOnly([
+        'agentId',
+        'label',
+        'status',
+        'queueMode',
+        'capabilities',
+        'hostname',
+        'platform',
+        'version',
+        'sessionStatus',
+        'currentTaskId',
+        'currentAccountId',
+        'currentOwnerId',
+        'lastHeartbeatAt',
+        'lastClaimAt',
+        'lastSyncAt',
+        'lastValidationAt',
+        'lastError',
         'createdAt',
         'updatedAt'
       ]);
@@ -340,6 +373,11 @@ service cloud.firestore {
         && (isOwner(userId) || isAdmin());
 
       allow delete: if isAdmin();
+    }
+
+    match /agentHeartbeats/{agentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if false;
     }
   }
 }
