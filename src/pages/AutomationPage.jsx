@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AutomationActivityPanel } from '../components/product/automation/AutomationActivityPanel'
+import { AutomationEvidencePanel } from '../components/product/automation/AutomationEvidencePanel'
 import { ExecutorStatusPanel } from '../components/product/automation/ExecutorStatusPanel'
 import { AutomationTaskForm } from '../components/product/automation/AutomationTaskForm'
 import { AutomationTimersPanel } from '../components/product/automation/AutomationTimersPanel'
@@ -316,7 +317,11 @@ export function AutomationPage() {
         type,
       })
 
-      setFeedback('Comando assistido enviado para a fila do agente.')
+      if (type === 'prepare_cycle') {
+        setFeedback('Preparacao assistida enviada. Ao concluir a leitura da tela, a tarefa sera reagendada para +3h.')
+      } else {
+        setFeedback('Comando assistido enviado para a fila do agente.')
+      }
     } catch (nextError) {
       setError(nextError.message)
     } finally {
@@ -396,6 +401,8 @@ export function AutomationPage() {
             isSubmitting={isSubmitting || Boolean(runningTaskId)}
             onEditTask={editTask}
           />
+
+          <AutomationEvidencePanel tasks={tasks} />
 
           <ManualLogForm
             accounts={accounts}

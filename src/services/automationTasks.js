@@ -5,6 +5,38 @@ import {
   updateOwnedDocument,
 } from './collectionHelpers'
 
+function withOptionalRuntimeFields(payload) {
+  const runtimePayload = {}
+
+  const runtimeFields = [
+    'agentStatus',
+    'claimedAt',
+    'claimedBy',
+    'lastRunAt',
+    'lastValidatedAt',
+    'validationStatus',
+    'validationSummary',
+    'lastInspectionAt',
+    'lastInspectionSummary',
+    'lastEvidencePath',
+    'availableUsd',
+    'tradingLimitUsd',
+    'tradeScreenVisible',
+    'plusVisible',
+    'threeHoursVisible',
+    'claimableVisible',
+    'confirmVisible',
+  ]
+
+  runtimeFields.forEach((field) => {
+    if (field in payload) {
+      runtimePayload[field] = payload[field]
+    }
+  })
+
+  return runtimePayload
+}
+
 function sanitizeTask(payload) {
   return {
     externalAccountId: String(payload.externalAccountId ?? '').trim(),
@@ -14,16 +46,10 @@ function sanitizeTask(payload) {
     cycleHours: Number(payload.cycleHours ?? 3),
     priority: Number(payload.priority ?? 1),
     status: String(payload.status ?? 'draft').trim(),
-    agentStatus: String(payload.agentStatus ?? 'idle').trim(),
-    claimedAt: String(payload.claimedAt ?? '').trim(),
-    claimedBy: String(payload.claimedBy ?? '').trim(),
     nextRunAt: String(payload.nextRunAt ?? '').trim(),
-    lastRunAt: String(payload.lastRunAt ?? '').trim(),
-    lastValidatedAt: String(payload.lastValidatedAt ?? '').trim(),
-    validationStatus: String(payload.validationStatus ?? 'pending').trim(),
-    validationSummary: String(payload.validationSummary ?? '').trim(),
     lastResult: String(payload.lastResult ?? 'Aguardando').trim(),
     notes: String(payload.notes ?? '').trim(),
+    ...withOptionalRuntimeFields(payload),
   }
 }
 

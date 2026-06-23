@@ -74,7 +74,10 @@ export default async function handler(request, response) {
       sessionMode: 'browser-persisted',
       sessionStatus: snapshot.data()?.sessionStatus ?? 'pending',
       runnerStatus: snapshot.data()?.runnerStatus ?? 'idle',
+      agentId: snapshot.data()?.agentId ?? '',
       lastExecutionAt: snapshot.data()?.lastExecutionAt ?? null,
+      lastSessionCheckAt: snapshot.data()?.lastSessionCheckAt ?? null,
+      lastValidationAt: snapshot.data()?.lastValidationAt ?? null,
       updatedAt: FieldValue.serverTimestamp(),
     }
 

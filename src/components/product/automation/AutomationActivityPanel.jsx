@@ -8,6 +8,14 @@ const COMMAND_LABELS = {
   validate_session: 'Validar sessao',
 }
 
+function renderFlag(value) {
+  if (value === undefined || value === null) {
+    return '-'
+  }
+
+  return value ? 'Sim' : 'Nao'
+}
+
 function getLatestCommand(commandByTaskId, taskId) {
   return commandByTaskId[taskId] ?? null
 }
@@ -87,6 +95,50 @@ export function AutomationActivityPanel({
                   </p>
                   <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
                     {latestCommand ? formatDateTime(latestCommand.updatedAt) : 'Sem historico'}
+                  </p>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-white">Checklist da tela</p>
+                    <StatusBadge status={task.tradeScreenVisible ? 'success' : 'pending'}>
+                      {task.tradeScreenVisible ? 'trade ok' : 'sem leitura'}
+                    </StatusBadge>
+                  </div>
+                  <div className="mt-3 grid gap-3 text-sm text-slate-300 xl:grid-cols-2">
+                    <p>
+                      <strong className="text-white">Ultima inspecao:</strong>{' '}
+                      {formatDateTime(task.lastInspectionAt)}
+                    </p>
+                    <p>
+                      <strong className="text-white">Disponivel:</strong> {task.availableUsd || '-'} USD
+                    </p>
+                    <p>
+                      <strong className="text-white">Limite:</strong> {task.tradingLimitUsd || '-'} USD
+                    </p>
+                    <p>
+                      <strong className="text-white">Plus visivel:</strong> {renderFlag(task.plusVisible)}
+                    </p>
+                    <p>
+                      <strong className="text-white">3Hours visivel:</strong> {renderFlag(task.threeHoursVisible)}
+                    </p>
+                    <p>
+                      <strong className="text-white">Claimable visivel:</strong> {renderFlag(task.claimableVisible)}
+                    </p>
+                    <p>
+                      <strong className="text-white">Confirm visivel:</strong> {renderFlag(task.confirmVisible)}
+                    </p>
+                    <p>
+                      <strong className="text-white">Proxima janela:</strong> {formatCountdown(task.nextRunAt)}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-400">
+                    {task.lastInspectionSummary || 'Nenhuma inspecao detalhada ainda.'}
+                  </p>
+                  <p className="mt-2 break-all text-xs uppercase tracking-[0.18em] text-slate-500">
+                    {task.lastEvidencePath
+                      ? `Evidencia local: ${task.lastEvidencePath}`
+                      : 'Sem evidencia salva ainda'}
                   </p>
                 </div>
 

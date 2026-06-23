@@ -16,6 +16,10 @@ function sanitizeSegment(value) {
     .replace(/^-+|-+$/g, '')
 }
 
+function buildTimestampSlug(date = new Date()) {
+  return date.toISOString().replace(/[:.]/g, '-')
+}
+
 function normalizePhone(phone) {
   const digits = String(phone ?? '').replace(/\D/g, '')
 
@@ -34,6 +38,16 @@ async function ensureProfileDir(config, externalAccount) {
 
   await fs.mkdir(profileDir, { recursive: true })
   return profileDir
+}
+
+async function ensureScreenshotDir(config, externalAccount) {
+  const screenshotDir = path.join(
+    config.screenshotRootDir,
+    sanitizeSegment(externalAccount?.id || externalAccount?.name || 'default-account'),
+  )
+
+  await fs.mkdir(screenshotDir, { recursive: true })
+  return screenshotDir
 }
 
 async function waitForTradeReady(page, config) {
@@ -96,6 +110,7 @@ async function inspectTradePage(page) {
     claimableVisible,
     confirmVisible,
     plusVisible,
+    tradeScreenVisible: /trade|open positions|active orders/i.test(normalizedText),
     textExcerpt: normalizedText.slice(0, 500),
     threeHoursVisible,
     tradingLimitUsd,
@@ -201,6 +216,7 @@ async function performLogin(page, externalAccount, config) {
 
 export async function runRealClaimedWorkItem({ command, config, externalAccount, task }) {
   const profileDir = await ensureProfileDir(config, externalAccount)
+  const screenshotDir = await ensureScreenshotDir(config, externalAccount)
   const context = await chromium.launchPersistentContext(profileDir, {
     headless: config.useHeadlessBrowser,
     viewport: { height: 900, width: 1440 },
@@ -229,6 +245,14 @@ export async function runRealClaimedWorkItem({ command, config, externalAccount,
     }
 
     const inspection = await inspectTradePage(page)
+    const screenshotPath = path.join(
+      screenshotDir,
+      `${buildTimestampSlug()}-${sanitizeSegment(command?.type || 'inspection')}.png`,
+    )
+    await page.screenshot({
+      fullPage: true,
+      path: screenshotPath,
+    })
     const commandLabel = getCommandLabel(command?.type)
     const validationSummary = buildValidationSummary({
       externalAccount,
@@ -240,7 +264,12 @@ export async function runRealClaimedWorkItem({ command, config, externalAccount,
     return {
       commandSummary: `${commandLabel}. Plus: ${inspection.plusVisible ? 'visivel' : 'nao visivel'}, 3Hours: ${
         inspection.threeHoursVisible ? 'visivel' : 'nao visivel'
-      }, Claimable: ${inspection.claimableVisible ? 'visivel' : 'nao visivel'}.`,
+      }, Claimable: ${inspection.claimableVisible ? 'visivel' : 'nao visivel'}. Evidencia: ${screenshotPath}.`,
+      inspection: {
+        ...inspection,
+        lastEvidencePath: screenshotPath,
+        lastInspectionSummary: `${commandLabel}. Disponivel: ${inspection.availableUsd || '-'} USD.`,
+      },
       lastError: '',
       logs: [
         {
@@ -264,8 +293,20 @@ export async function runRealClaimedWorkItem({ command, config, externalAccount,
           taskId: task.id,
           type: 'inspection',
         },
+        {
+          message: `Screenshot salvo em ${screenshotPath}.`,
+          source: 'agent',
+          status: 'success',
+          taskId: task.id,
+          type: 'evidence',
+        },
       ],
-      nextRunAt: command ? '' : buildNextRunAt(task),
+      nextRunAt:
+        command?.type === 'prepare_cycle'
+          ? buildNextRunAt(task)
+          : command
+            ? ''
+            : buildNextRunAt(task),
       sessionStatus: 'connected',
       validationStatus: 'success',
       validationSummary,
@@ -278,6 +319,9 @@ export async function runRealClaimedWorkItem({ command, config, externalAccount,
 
     return {
       commandSummary: message,
+      inspection: {
+        lastInspectionSummary: message,
+      },
       lastError: message,
       logs: [
         {
@@ -288,7 +332,12 @@ export async function runRealClaimedWorkItem({ command, config, externalAccount,
           type: 'navigation',
         },
       ],
-      nextRunAt: command ? '' : buildNextRunAt(task),
+      nextRunAt:
+        command?.type === 'prepare_cycle'
+          ? buildNextRunAt(task)
+          : command
+            ? ''
+            : buildNextRunAt(task),
       sessionStatus: 'expired_session',
       validationStatus: 'failed',
       validationSummary: message,

@@ -79,6 +79,9 @@ export const agentConfig = {
   profileRootDir:
     String(process.env.AGENT_PROFILE_ROOT_DIR ?? '').trim() ||
     path.join(projectRoot, 'agent', '.sessions'),
+  screenshotRootDir:
+    String(process.env.AGENT_SCREENSHOT_ROOT_DIR ?? '').trim() ||
+    path.join(projectRoot, 'agent', '.screenshots'),
   serverUrl: trimTrailingSlash(getRequiredEnv('AGENT_SERVER_URL')),
   sharedSecret: getRequiredEnv('AGENT_SHARED_SECRET'),
   targetLoginUrl:

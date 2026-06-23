@@ -81,6 +81,7 @@ async function processClaimedWorkItem(claimResponse) {
     commandId: command?.id ?? '',
     commandSummary: result.commandSummary ?? '',
     externalAccountId: externalAccount.id,
+    inspection: result.inspection ?? null,
     lastError: result.lastError,
     logs: result.logs,
     nextRunAt: result.nextRunAt,

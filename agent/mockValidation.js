@@ -22,6 +22,17 @@ export async function simulateClaimedTask({ command, config, externalAccount, ta
 
   return {
     commandSummary: 'Modo assistido simulado concluido.',
+    inspection: {
+      availableUsd: '',
+      claimableVisible: false,
+      confirmVisible: false,
+      lastEvidencePath: '',
+      lastInspectionSummary: validationSummary,
+      plusVisible: false,
+      threeHoursVisible: false,
+      tradeScreenVisible: true,
+      tradingLimitUsd: '',
+    },
     lastError: hasError ? validationSummary : '',
     logs: [
       {
@@ -46,7 +57,12 @@ export async function simulateClaimedTask({ command, config, externalAccount, ta
         type: 'validation',
       },
     ],
-    nextRunAt: command ? '' : buildNextRunAt(task, startedAt),
+    nextRunAt:
+      command?.type === 'prepare_cycle'
+        ? buildNextRunAt(task, startedAt)
+        : command
+          ? ''
+          : buildNextRunAt(task, startedAt),
     sessionStatus,
     validationStatus,
     validationSummary,
