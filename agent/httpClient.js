@@ -46,6 +46,9 @@ async function postJson(config, route, payload) {
 
 export function createAgentHttpClient(config) {
   return {
+    claimCommand() {
+      return postJson(config, '/api/agent/claim-command', {})
+    },
     claimTask() {
       return postJson(config, '/api/agent/claim-task', {})
     },

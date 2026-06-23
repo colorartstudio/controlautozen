@@ -61,6 +61,47 @@ async function waitForTradeReady(page, config) {
   return false
 }
 
+function getCommandLabel(commandType) {
+  switch (commandType) {
+    case 'open_trade':
+      return 'Tela de trade aberta para revisao'
+    case 'prepare_cycle':
+      return 'Ciclo preparado para revisao manual'
+    case 'validate_session':
+    default:
+      return 'Sessao validada'
+  }
+}
+
+function extractCurrencyValue(text, pattern) {
+  const match = text.match(pattern)
+  return match?.[1]?.trim() ?? ''
+}
+
+async function inspectTradePage(page) {
+  const bodyText = await page.locator('body').innerText().catch(() => '')
+  const normalizedText = bodyText.replace(/\s+/g, ' ').trim()
+  const plusVisible = /plus/i.test(normalizedText)
+  const threeHoursVisible = /3hours/i.test(normalizedText)
+  const claimableVisible = /claimable/i.test(normalizedText)
+  const confirmVisible = /confirm injection|confirm/i.test(normalizedText)
+  const availableUsd = extractCurrencyValue(normalizedText, /available\s+\$?([0-9.,]+)/i)
+  const tradingLimitUsd = extractCurrencyValue(
+    normalizedText,
+    /trading limit\s+([0-9.,]+)\s*usd/i,
+  )
+
+  return {
+    availableUsd,
+    claimableVisible,
+    confirmVisible,
+    plusVisible,
+    textExcerpt: normalizedText.slice(0, 500),
+    threeHoursVisible,
+    tradingLimitUsd,
+  }
+}
+
 async function hasCaptcha(page) {
   const bodyText = await page.locator('body').innerText().catch(() => '')
   return /image captcha|confirmcancel|please enter the image captcha/i.test(bodyText)
@@ -158,7 +199,7 @@ async function performLogin(page, externalAccount, config) {
   })
 }
 
-export async function runRealClaimedTask({ config, externalAccount, task }) {
+export async function runRealClaimedWorkItem({ command, config, externalAccount, task }) {
   const profileDir = await ensureProfileDir(config, externalAccount)
   const context = await chromium.launchPersistentContext(profileDir, {
     headless: config.useHeadlessBrowser,
@@ -187,14 +228,19 @@ export async function runRealClaimedTask({ config, externalAccount, task }) {
       throw new Error('Nao foi possivel validar a navegacao ate a tela de trade.')
     }
 
+    const inspection = await inspectTradePage(page)
+    const commandLabel = getCommandLabel(command?.type)
     const validationSummary = buildValidationSummary({
       externalAccount,
-      prefix: 'Login real concluido e tela de trade validada',
+      prefix: commandLabel,
       task,
       validationStatus: 'success',
     })
 
     return {
+      commandSummary: `${commandLabel}. Plus: ${inspection.plusVisible ? 'visivel' : 'nao visivel'}, 3Hours: ${
+        inspection.threeHoursVisible ? 'visivel' : 'nao visivel'
+      }, Claimable: ${inspection.claimableVisible ? 'visivel' : 'nao visivel'}.`,
       lastError: '',
       logs: [
         {
@@ -211,8 +257,15 @@ export async function runRealClaimedTask({ config, externalAccount, task }) {
           taskId: task.id,
           type: 'navigation',
         },
+        {
+          message: `Inspecao assistida: limite ${inspection.tradingLimitUsd || '-'} USD, disponivel ${inspection.availableUsd || '-'} USD, Plus ${inspection.plusVisible ? 'ok' : 'nao encontrado'}, 3Hours ${inspection.threeHoursVisible ? 'ok' : 'nao encontrado'}, Claimable ${inspection.claimableVisible ? 'sim' : 'nao'}.`,
+          source: 'agent',
+          status: 'success',
+          taskId: task.id,
+          type: 'inspection',
+        },
       ],
-      nextRunAt: buildNextRunAt(task),
+      nextRunAt: command ? '' : buildNextRunAt(task),
       sessionStatus: 'connected',
       validationStatus: 'success',
       validationSummary,
@@ -224,6 +277,7 @@ export async function runRealClaimedTask({ config, externalAccount, task }) {
         : 'Falha desconhecida ao validar sessao real no navegador persistente.'
 
     return {
+      commandSummary: message,
       lastError: message,
       logs: [
         {
@@ -234,7 +288,7 @@ export async function runRealClaimedTask({ config, externalAccount, task }) {
           type: 'navigation',
         },
       ],
-      nextRunAt: buildNextRunAt(task),
+      nextRunAt: command ? '' : buildNextRunAt(task),
       sessionStatus: 'expired_session',
       validationStatus: 'failed',
       validationSummary: message,

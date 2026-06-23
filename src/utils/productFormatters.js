@@ -76,6 +76,7 @@ export function getStatusTone(status) {
     case 'paused':
     case 'pending':
     case 'draft':
+    case 'queued':
       return 'amber'
     case 'blocked':
     case 'expired':

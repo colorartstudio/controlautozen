@@ -249,6 +249,25 @@ service cloud.firestore {
       ]);
     }
 
+    function hasAgentCommandKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'externalAccountId',
+        'externalAccountName',
+        'taskId',
+        'type',
+        'status',
+        'requestedBy',
+        'requestedByRole',
+        'claimedAt',
+        'claimedBy',
+        'completedAt',
+        'resultSummary',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
     match /users/{userId} {
       allow create: if isOwner(userId)
         && hasValidKeys()
@@ -378,6 +397,17 @@ service cloud.firestore {
     match /agentHeartbeats/{agentId} {
       allow read: if isSignedIn();
       allow create, update, delete: if false;
+    }
+
+    match /agentCommands/{commandId} {
+      allow create: if canManageProduct()
+        && hasAgentCommandKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow update, delete: if false;
     }
   }
 }

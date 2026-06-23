@@ -6,7 +6,7 @@ function sleep(ms) {
   })
 }
 
-export async function simulateClaimedTask({ config, externalAccount, task }) {
+export async function simulateClaimedTask({ command, config, externalAccount, task }) {
   const startedAt = new Date()
   await sleep(config.validationDelayMs)
 
@@ -21,6 +21,7 @@ export async function simulateClaimedTask({ config, externalAccount, task }) {
   })
 
   return {
+    commandSummary: 'Modo assistido simulado concluido.',
     lastError: hasError ? validationSummary : '',
     logs: [
       {
@@ -45,7 +46,7 @@ export async function simulateClaimedTask({ config, externalAccount, task }) {
         type: 'validation',
       },
     ],
-    nextRunAt: buildNextRunAt(task, startedAt),
+    nextRunAt: command ? '' : buildNextRunAt(task, startedAt),
     sessionStatus,
     validationStatus,
     validationSummary,

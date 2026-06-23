@@ -8,6 +8,10 @@ import { StatCard } from '../components/ui/StatCard'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscriptionAccess } from '../hooks/useSubscriptionAccess'
 import {
+  queueAgentCommand,
+  subscribeToAgentCommands,
+} from '../services/agentCommands'
+import {
   createAutomationTask,
   deleteAutomationTask,
   subscribeToAutomationTasks,
@@ -48,6 +52,7 @@ export function AutomationPage() {
   const [tasks, setTasks] = useState([])
   const [logs, setLogs] = useState([])
   const [agents, setAgents] = useState([])
+  const [commands, setCommands] = useState([])
   const [taskForm, setTaskForm] = useState(TASK_FORM)
   const [logForm, setLogForm] = useState(LOG_FORM)
   const [feedback, setFeedback] = useState('')
@@ -61,6 +66,12 @@ export function AutomationPage() {
     }
 
     const unsubscribers = [
+      subscribeToAgentCommands({
+        ownerId: session.authUser.uid,
+        isAdmin: session.isAdmin,
+        next: (items) => setCommands(items.slice(0, 20)),
+        error: (nextError) => setError(nextError.message),
+      }),
       subscribeToAgentHeartbeats({
         next: setAgents,
         error: (nextError) => setError(nextError.message),
@@ -121,6 +132,27 @@ export function AutomationPage() {
         return accumulator
       }, {}),
     [accounts],
+  )
+  const commandByTaskId = useMemo(
+    () =>
+      commands.reduce((accumulator, item) => {
+        const current = accumulator[item.taskId]
+
+        if (!current) {
+          accumulator[item.taskId] = item
+          return accumulator
+        }
+
+        const currentTime = new Date(current.updatedAt?.toDate?.() ?? current.updatedAt ?? 0).getTime()
+        const nextTime = new Date(item.updatedAt?.toDate?.() ?? item.updatedAt ?? 0).getTime()
+
+        if (nextTime >= currentTime) {
+          accumulator[item.taskId] = item
+        }
+
+        return accumulator
+      }, {}),
+    [commands],
   )
   const runnerConnectedCount = useMemo(
     () => accounts.filter((item) => item.sessionStatus === 'connected').length,
@@ -268,6 +300,30 @@ export function AutomationPage() {
     }
   }
 
+  async function handleQueueCommand(task, type) {
+    setFeedback('')
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      if (!subscriptionAccess.canManageProduct && !session.isAdmin) {
+        throw new Error(subscriptionAccess.readOnlyReason)
+      }
+
+      await queueAgentCommand({
+        externalAccountId: task.externalAccountId,
+        taskId: task.id,
+        type,
+      })
+
+      setFeedback('Comando assistido enviado para a fila do agente.')
+    } catch (nextError) {
+      setError(nextError.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {subscriptionAccess.isReady && !subscriptionAccess.canManageProduct && !session.isAdmin ? (
@@ -322,10 +378,12 @@ export function AutomationPage() {
 
           <AutomationActivityPanel
             accountById={accountById}
+            commandByTaskId={commandByTaskId}
             isSubmitting={isSubmitting || (!subscriptionAccess.canManageProduct && !session.isAdmin)}
             logs={logs}
             onDeleteTask={handleDeleteTask}
             onEditTask={editTask}
+            onQueueCommand={handleQueueCommand}
             onRunTask={handleRunTask}
             runningTaskId={runningTaskId}
             tasks={tasks}

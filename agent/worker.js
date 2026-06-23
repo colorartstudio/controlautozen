@@ -1,6 +1,6 @@
 import { agentConfig, redactAgentConfig } from './config.js'
 import { createAgentHttpClient } from './httpClient.js'
-import { runClaimedTask } from './taskRunner.js'
+import { runClaimedWorkItem } from './taskRunner.js'
 
 const client = createAgentHttpClient(agentConfig)
 let shouldStop = false
@@ -56,40 +56,57 @@ async function sendHeartbeat(lastError = '') {
   return response
 }
 
-async function processClaimedTask(claimResponse) {
-  const { externalAccount, task } = claimResponse
+async function processClaimedWorkItem(claimResponse) {
+  const { command, externalAccount, task } = claimResponse
+  const effectiveTask = task ?? {
+    cycleHours: 3,
+    externalAccountName: externalAccount?.name ?? 'Conta externa',
+    id: command?.taskId ?? '',
+  }
 
-  log('info', 'Tarefa reservada pelo agente.', {
-    account: externalAccount?.name ?? task.externalAccountName,
-    taskId: task.id,
+  log('info', command ? 'Comando assistido reservado.' : 'Tarefa reservada pelo agente.', {
+    account: externalAccount?.name ?? effectiveTask.externalAccountName,
+    commandId: command?.id ?? '',
+    taskId: effectiveTask.id,
   })
 
-  const result = await runClaimedTask({
+  const result = await runClaimedWorkItem({
+    command,
     config: agentConfig,
     externalAccount,
-    task,
+    task: effectiveTask,
   })
 
   await client.syncState({
+    commandId: command?.id ?? '',
+    commandSummary: result.commandSummary ?? '',
     externalAccountId: externalAccount.id,
     lastError: result.lastError,
     logs: result.logs,
     nextRunAt: result.nextRunAt,
     sessionStatus: result.sessionStatus,
-    taskId: task.id,
+    taskId: effectiveTask.id,
     validationStatus: result.validationStatus,
     validationSummary: result.validationSummary,
   })
 
   log('info', 'Sync-state concluido.', {
+    commandId: command?.id ?? '',
     nextRunAt: result.nextRunAt,
-    taskId: task.id,
+    taskId: effectiveTask.id,
     validationStatus: result.validationStatus,
   })
 }
 
 async function runCycle() {
   await sendHeartbeat()
+
+  const commandResponse = await client.claimCommand()
+
+  if (commandResponse.claimed) {
+    await processClaimedWorkItem(commandResponse)
+    return
+  }
 
   const claimResponse = await client.claimTask()
 
@@ -98,7 +115,7 @@ async function runCycle() {
     return
   }
 
-  await processClaimedTask(claimResponse)
+  await processClaimedWorkItem(claimResponse)
 }
 
 async function startWorker() {
