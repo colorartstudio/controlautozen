@@ -1,121 +1,83 @@
+@import "tailwindcss";
+
 :root {
+  color-scheme: dark;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #e5eef8;
-  background: #09111f;
   font-synthesis: none;
+  line-height: 1.5;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(71, 132, 255, 0.35), transparent 35%),
-    linear-gradient(180deg, #08101d 0%, #0d1728 100%);
+  background: #020617;
+  color: #e2e8f0;
 }
 
 body,
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  outline: none;
 }
 
 #root {
   width: 100%;
 }
 
-.app-shell {
-  width: min(1120px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 48px 0 64px;
+input,
+select,
+textarea {
+  color: #f8fafc;
+  caret-color: #38bdf8;
 }
 
-.hero {
-  margin-bottom: 32px;
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
 }
 
-.hero__eyebrow {
-  display: inline-flex;
-  padding: 6px 12px;
-  margin-bottom: 12px;
-  border-radius: 999px;
-  background: rgba(82, 144, 255, 0.16);
-  color: #91b8ff;
-  font-size: 0.85rem;
+select {
+  color-scheme: dark;
 }
 
-.hero h1 {
-  margin: 0 0 12px;
-  font-size: clamp(2.2rem, 5vw, 3.6rem);
+select option,
+select optgroup {
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
-.hero p {
-  max-width: 720px;
-  margin: 0;
-  color: #b5c4d9;
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0 1000px #020617 inset;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
-.grid {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-
-.card {
-  padding: 24px;
-  border: 1px solid rgba(148, 179, 255, 0.14);
-  border-radius: 20px;
-  background: rgba(8, 16, 29, 0.78);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-.card h2 {
-  margin-top: 0;
-  margin-bottom: 12px;
-}
-
-.card p {
-  margin-top: 0;
-  color: #b5c4d9;
-}
-
-.card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.badge {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(250, 204, 21, 0.16);
-  color: #fde68a;
-  font-size: 0.85rem;
-}
-
-.badge--ok {
-  background: rgba(34, 197, 94, 0.16);
-  color: #86efac;
-}
-
-.status-list,
-.steps-list {
-  padding-left: 20px;
-  margin: 0;
-  color: #d7e3f4;
-}
-
-.status-list li,
-.steps-list li {
-  margin-bottom: 10px;
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.92) sepia(0.05) saturate(1.8) hue-rotate(173deg);
+  opacity: 0.85;
 }

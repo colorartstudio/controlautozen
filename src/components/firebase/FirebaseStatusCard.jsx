@@ -3,10 +3,12 @@ import { firebaseConfigStatus, isFirebaseConfigured } from '../../config/env'
 const fieldLabels = {
   apiKey: 'API Key',
   authDomain: 'Auth Domain',
+  databaseURL: 'Database URL',
   projectId: 'Project ID',
   storageBucket: 'Storage Bucket',
   messagingSenderId: 'Messaging Sender ID',
   appId: 'App ID',
+  measurementId: 'Measurement ID',
 }
 
 export function FirebaseStatusCard() {

@@ -1,0 +1,345 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && currentUserDoc().data.role == 'admin';
+    }
+
+    function subscriptionDoc() {
+      return get(/databases/$(database)/documents/subscriptions/$(request.auth.uid));
+    }
+
+    function hasSubscriptionDoc() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/subscriptions/$(request.auth.uid));
+    }
+
+    function hasTrialAccess() {
+      return hasSubscriptionDoc()
+        && subscriptionDoc().data.status == 'trialing'
+        && request.time < subscriptionDoc().data.trialEndsAt;
+    }
+
+    function hasActiveSubscription() {
+      return hasSubscriptionDoc()
+        && subscriptionDoc().data.status == 'active'
+        && request.time < subscriptionDoc().data.nextBillingAt;
+    }
+
+    function canManageProduct() {
+      return isAdmin() || hasTrialAccess() || hasActiveSubscription();
+    }
+
+    function hasValidKeys() {
+      return request.resource.data.keys().hasOnly([
+        'uid',
+        'email',
+        'displayName',
+        'phone',
+        'photoURL',
+        'providerIds',
+        'role',
+        'status',
+        'authDisabled',
+        'notes',
+        'createdAt',
+        'updatedAt',
+        'lastLoginAt'
+      ]);
+    }
+
+    function validUserRole(value) {
+      return value in ['user', 'admin', 'recruiter'];
+    }
+
+    function ownerKeepsProtectedFields() {
+      return request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.authDisabled == resource.data.authDisabled
+        && request.resource.data.notes == resource.data.notes;
+    }
+
+    function hasVehicleKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'plate',
+        'brand',
+        'model',
+        'year',
+        'color',
+        'status',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasAppointmentKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'title',
+        'date',
+        'time',
+        'vehiclePlate',
+        'location',
+        'status',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function ownerIdRemainsSame() {
+      return request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    function hasExternalAccountKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'name',
+        'phoneMasked',
+        'hasPassword',
+        'status',
+        'sessionMode',
+        'sessionStatus',
+        'runnerStatus',
+        'notes',
+        'lastCredentialUpdateAt',
+        'lastExecutionAt',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasExternalAccountSecretKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'phoneEncrypted',
+        'passwordEncrypted',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasAutomationTaskKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'externalAccountId',
+        'externalAccountName',
+        'plusAmount',
+        'minAvailableBalance',
+        'cycleHours',
+        'priority',
+        'status',
+        'nextRunAt',
+        'lastRunAt',
+        'lastResult',
+        'notes',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasExecutionLogKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'externalAccountId',
+        'externalAccountName',
+        'taskId',
+        'type',
+        'status',
+        'source',
+        'message',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasSubscriptionKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'planName',
+        'priceAmount',
+        'currency',
+        'billingCycle',
+        'billingCycleDays',
+        'billingProvider',
+        'paymentAddress',
+        'paymentAmount',
+        'paymentCurrency',
+        'paymentContext',
+        'paymentExpiresAt',
+        'paymentId',
+        'paymentOrderId',
+        'paymentStatus',
+        'paymentUrl',
+        'pausedAt',
+        'purchaseId',
+        'renewalWindowDays',
+        'trialConsumedAt',
+        'status',
+        'trialDays',
+        'trialEndsAt',
+        'lastPaymentAt',
+        'nextBillingAt',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function hasReferralKeys() {
+      return request.resource.data.keys().hasOnly([
+        'ownerId',
+        'code',
+        'invitePath',
+        'status',
+        'referredCount',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId)
+        && hasValidKeys()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role == 'user'
+        && request.resource.data.status == 'active';
+
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow update: if hasValidKeys() && (
+        (isOwner(userId)
+          && ownerKeepsProtectedFields()
+          && validUserRole(request.resource.data.role))
+        || isAdmin()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /vehicles/{vehicleId} {
+      allow create: if isSignedIn()
+        && hasVehicleKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow update: if isSignedIn()
+        && hasVehicleKeys()
+        && ownerIdRemainsSame()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow delete: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /appointments/{appointmentId} {
+      allow create: if isSignedIn()
+        && hasAppointmentKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow update: if isSignedIn()
+        && hasAppointmentKeys()
+        && ownerIdRemainsSame()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow delete: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /externalAccounts/{accountId} {
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow create, update, delete: if false;
+    }
+
+    match /externalAccountSecrets/{accountId} {
+      allow read, write: if false;
+    }
+
+    match /automationTasks/{taskId} {
+      allow create: if canManageProduct()
+        && hasAutomationTaskKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow update: if canManageProduct()
+        && hasAutomationTaskKeys()
+        && ownerIdRemainsSame()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow delete: if canManageProduct()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /executionLogs/{logId} {
+      allow create: if canManageProduct()
+        && hasExecutionLogKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isSignedIn()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow update: if canManageProduct()
+        && hasExecutionLogKeys()
+        && ownerIdRemainsSame()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      allow delete: if canManageProduct()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /subscriptions/{userId} {
+      allow create: if isOwner(userId)
+        && hasSubscriptionKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow update: if hasSubscriptionKeys()
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (isOwner(userId) || isAdmin());
+
+      allow delete: if isAdmin();
+    }
+
+    match /referrals/{userId} {
+      allow create: if isOwner(userId)
+        && hasReferralKeys()
+        && request.resource.data.ownerId == request.auth.uid;
+
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow update: if hasReferralKeys()
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (isOwner(userId) || isAdmin());
+
+      allow delete: if isAdmin();
+    }
+  }
+}

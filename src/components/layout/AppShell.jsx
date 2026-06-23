@@ -5,8 +5,8 @@ export function AppShell({ children }) {
         <span className="hero__eyebrow">React + Vite + Firebase</span>
         <h1>Control Auto Zen</h1>
         <p>
-          Base pronta para versionar no GitHub, publicar no Vercel e conectar
-          autenticação com Firestore via Firebase.
+          Painel inicial com autenticacao real, perfis de usuarios no Firestore
+          e base de seguranca para evoluir no GitHub, Vercel e Firebase.
         </p>
       </header>
       <main>{children}</main>
